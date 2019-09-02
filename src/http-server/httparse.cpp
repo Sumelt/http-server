@@ -1,3 +1,9 @@
+/*
+ * @Description: 解析请求类
+ * @Author: melt
+ * @Date: 2019-09-02 14:32:07
+ * @LastEditTime: 2019-09-02 14:32:30
+ */
 #include "httparse.h"
 
 httparse::httparse() {
