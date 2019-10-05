@@ -1,27 +1,30 @@
 #include "httpserver.h"
 #include "httparse.h"
-//设置不阻塞
+
+//设置不阻塞 配合epoll
 int setnoblock( int &fd ) {
     int oldOpt = fcntl( fd, F_GETFL );
     fcntl( fd, F_SETFL, oldOpt | O_NONBLOCK );
     return oldOpt;
 }
 
+//自定义的输出接口，opt为真刷新缓冲区
 inline void cot( const char* str, bool opt ) {
-    opt ? ( cout << str << endl ) :( cout << str << flush );
+    opt ? ( cout << str << endl ) : ( cout << str << flush );
 }
 
+//构造函数
 httpserver::httpserver( uint16_t port ) {
     onlineSum = 0;
-    memset( &servaddr, 0, sizeof ( servaddr ) );
-    servfd = socket( AF_INET, SOCK_STREAM, 0 );
+    memset( &servaddr, 0, sizeof ( servaddr ) );//初始化结构体
+    servfd = socket( AF_INET, SOCK_STREAM, 0 );//创建socket
     if( servfd == -1 )
         handle_error_exit( "http_server socket faile!" );
     cot( "http_server socket OK!" );
     
     int opt = 1;
     setsockopt( servfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof( opt ) );//端口复用
-    http_bind( port );
+    http_bind( port );//绑定端口
     
     pasre = new httparse ();//创建解析对象
     cot( "The server is ready to wait for the client to connect......." );
@@ -54,8 +57,12 @@ void httpserver::http_listen() {
 }
 
 void httpserver::http_disconnect( int fd ) {
-    close( fd );
-    setEpollEvent( fd, EPOLL_CTL_DEL, EPOLLIN );
+    //close( fd );
+    //优雅断开
+    shutdown( fd, SHUT_RD );//先关闭读端
+    shutdown( fd, SHUT_WR );//再关闭写端
+
+    setEpollEvent( fd, EPOLL_CTL_DEL, EPOLLIN );//epoll移除该描述符
     cot( "http_server Notice: a client left!" );
 }
 
@@ -63,19 +70,20 @@ void httpserver::http_accept(void *) {
     struct sockaddr_in cliaddr;
     socklen_t clilen = sizeof( cliaddr );
     
-    int connfd = accept( servfd, reinterpret_cast<sockaddr*>( &cliaddr ), &clilen );
+    int connfd = accept( servfd, reinterpret_cast<sockaddr*>( &cliaddr ), &clilen );//接受连接
     if( connfd == -1 )
         handle_error_exit( "http_server Notice: accpet a new client faile! " );
     
     ++onlineSum;
-    string IP = string( inet_ntoa( cliaddr.sin_addr ) );
+    string IP = string( inet_ntoa( cliaddr.sin_addr ) );//保存客户机地址
     cout << "http_server accpet new Client: " << IP << endl;
     
-    setnoblock( connfd ); //该套接字设置非阻塞
-    setEpollEvent( connfd, EPOLL_CTL_ADD, EPOLLIN | EPOLLET ); //开启ET模式
+    setnoblock( connfd ); //对套接字设置非阻塞
+    setEpollEvent( connfd, EPOLL_CTL_ADD, EPOLLIN | EPOLLET ); //开启ET模式，边缘触发
     
 }
 
+//操作epoll事件
 void httpserver::setEpollEvent(int fd, int op, uint32_t status) {
     ep_ctl.data.fd = fd;
     ep_ctl.events = status;
@@ -83,11 +91,11 @@ void httpserver::setEpollEvent(int fd, int op, uint32_t status) {
 }
 
 void httpserver::do_read( int fd ) {
-    char line[ 1024 ] = { 0 };
-    bool keeplive = false;
-    int len = get_line( fd, line, sizeof ( line ) );//解析请求行
+    char line[ 1024 ] = { 0 };//请求行缓冲区
+    bool keeplive = false;//长连接标记
+    int len = get_line( fd, line, sizeof ( line ) );//解析请求行，demo_func.cpp函数
     if( len == 0 ) {
-        http_disconnect( fd );
+        http_disconnect( fd );//解析失败
         //exit( EXIT_FAILURE );
     }
     //截取请求头
@@ -116,7 +124,7 @@ void httpserver::do_read( int fd ) {
 }
 
 void httpserver::http_epoll() {
-    ep_fd =  epoll_create( MAXUSERS );
+    ep_fd = epoll_create( MAXUSERS );
     struct epoll_event ep_wait[ MAXUSERS + 1 ];//就绪队列
     //服务器事件加入
     setEpollEvent( servfd, EPOLL_CTL_ADD, EPOLLIN );

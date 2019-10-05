@@ -39,16 +39,16 @@ private:
     struct epoll_event ep_ctl;//epoll event结构体
     socklen_t servlen;
     int servfd, ep_fd;
-    int onlineSum;
-    
+    int onlineSum;//在线人数
+
     void http_accept( void* );    
     void http_bind( uint16_t port );
     void http_listen();
     void http_epoll();
     void http_disconnect( int fd );
     
-    void setEpollEvent( int fd, int op, uint32_t status );
-    void do_read( int fd );
+    void setEpollEvent( int fd, int op, uint32_t status );//epoll事件
+    void do_read( int fd );//读事件
     
 public:
     httparse *pasre;
