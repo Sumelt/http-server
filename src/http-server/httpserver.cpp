@@ -93,7 +93,7 @@ void httpserver::setEpollEvent(int fd, int op, uint32_t status) {
 void httpserver::do_read( int fd ) {
     char line[ 1024 ] = { 0 };//请求行缓冲区
     bool keeplive = false;//长连接标记
-    int len = get_line( fd, line, sizeof ( line ) );//解析请求行，demo_func.cpp函数
+    int len = get_line( fd, line, sizeof ( line ) );//解析HTTP报文，demo_func.cpp函数
     if( len == 0 ) {
         http_disconnect( fd );//解析失败
         //exit( EXIT_FAILURE );
@@ -115,7 +115,7 @@ void httpserver::do_read( int fd ) {
         cot( "============= The End ===================" );
     }
 
-    //解析请求头
+    //解析请求头，只支持get方法
     if( strncasecmp( "GET", line, 3 ) == 0 ) {
         this->pasre->http_parse_request( fd, line );//组合设计模式
         if( !keeplive ) //保持长连接

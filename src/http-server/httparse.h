@@ -26,9 +26,9 @@ public:
 };
 
 
-const char *get_file_type(const char *name);
-void encode_str(char* to, int tosize, const char* from);
-void decode_str(char *to, char *from);
-int get_line(int sock, char *buf, int size);
+const char *get_file_type(const char *name);//获取文件类型
+void encode_str(char* to, int tosize, const char* from);//字符编码
+void decode_str(char *to, char *from);//字符解码
+int get_line(int sock, char *buf, int size);//解析一行
 
 #endif // HTTPARSE_H

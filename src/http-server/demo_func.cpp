@@ -6,7 +6,7 @@ const char *get_file_type(const char *name)
 
     dot = strrchr(name, '.');   // 自右向左查找‘.’字符, 如不存在返回NULL
     if (dot == nullptr)
-        return "text/plain; charset=utf-8";
+        return "text/plain; charset=utf-8";//直接返回文本
     if (strcmp(dot, ".html") == 0 || strcmp(dot, ".htm") == 0)
         return "text/html; charset=utf-8";
     if (strcmp(dot, ".jpg") == 0 || strcmp(dot, ".jpeg") == 0)
@@ -62,6 +62,7 @@ int hexit(char c)
  *  相关知识html中的‘ ’(space)是&nbsp
  */
 //编码--中文变为16进制数
+//例如: "文"和"章"的utf-8编码分别是"E6 96 87"和"E7 AB A0"
 //to存储的位置，tosize 存储位置大小 from
 void encode_str(char* to, int tosize, const char* from)
 {
@@ -111,22 +112,27 @@ void decode_str(char *to, char *from)
 
 
 // 解析http请求消息的每一行内容
+// \n\r结尾
+//如何解析HTTP报文头部的
+/*读套接字缓冲区里的每一个字符。定义一个较大的buff，每次只read一字节，只要不是\n\r则把读到的字符
+ * 拷贝到自定义的buff里
+ */
 int get_line(int sock, char *buf, int size)
 {
-    int i = 0;
-    char c = '\0';
-    ssize_t n = 0;
-    while ((i < size - 1) && (c != '\n'))//读完指定的字节数或者读到回车跳出
+    int i = 0;//偏移量
+    char c = '\0';//读到的字符
+    ssize_t n = 0;//读到的字节数
+    while ( ( i < size - 1 ) && ( c != '\n' ) )//读完指定的字节数或者读到回车跳出
     {
         n = recv(sock, &c, 1, 0);//读一个字符
         if (n > 0)
         {
             if (c == '\r')
             {
-                n = recv(sock, &c, 1, MSG_PEEK);
+                n = recv(sock, &c, 1, MSG_PEEK);//偷看缓冲区
                 if ((n > 0) && (c == '\n'))
                 {
-                    recv(sock, &c, 1, 0);//完整读到一行
+                    recv(sock, &c, 1, 0);//完整读到一行则跳出
                 }
                 else
                 {
